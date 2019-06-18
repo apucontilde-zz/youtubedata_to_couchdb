@@ -30,7 +30,7 @@ SERVER_IP = "34.239.140.119"
 SERVER_PORT = 5984
 max_results=40
 headers = {"Host": "couchdb:5984", "Accept": "application/json"}
-
+DEVELOPER_KEY = 'AIzaSyBOfDRyLXu7yhnFAZBiX_FDNclU7EqxSO0'
 
 def youtube_search(keywords, max_results):
     youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION,
@@ -79,7 +79,9 @@ def youtube_search(keywords, max_results):
                     "title": search_result['snippet']['title'], 
                     "description": search_result['snippet']['description'], 
                     "publishedAt": search_result['snippet']['publishedAt'], 
-                    "statistics" : search_result['statistics']} 
+                    "statistics" : search_result['statistics']}
+                    if video_dict['videoId'][0]=="_":
+                        video_dict['videoId']="-"+video_dict['videoId']
                     for tag in search_result['snippet']['tags']:
                             if tag not in tags:
                                 tags[tag] = []
