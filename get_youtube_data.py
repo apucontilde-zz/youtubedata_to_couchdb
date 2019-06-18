@@ -24,12 +24,13 @@ from googleapiclient.errors import HttpError
 # tab of
 #   https://cloud.google.com/console
 # Please ensure that you have enabled the YouTube Data API for your project.
-DEVELOPER_KEY = 'AIzaSyBbhJtYlRz4H_rGUebqH5wovHNd9aK0usQ'
 YOUTUBE_API_SERVICE_NAME = 'youtube'
 YOUTUBE_API_VERSION = 'v3'
 SERVER_IP = "34.239.140.119"
 SERVER_PORT = 5984
 max_results=40
+headers = {"Host": "couchdb:5984", "Accept": "application/json"}
+
 
 def youtube_search(keywords, max_results):
     youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION,
@@ -68,7 +69,6 @@ def youtube_search(keywords, max_results):
             ).execute()
 
             
-            headers = {"Host": "couchdb:5984", "Accept": "application/json"}
 
 
             for search_result in search_response.get('items', []):
@@ -92,50 +92,55 @@ def youtube_search(keywords, max_results):
     videos = dict()
     for tag, tag_videos in tags.items():
         if len(tag_videos) > 6 :
+            try:
+                #with referenced videos
+                tagId = tag.replace(' ','_')
+                tag_ref_dict = {
+                    "doc_type": "tag_reference",
+                    "tagId": tagId,
+                    "tag": tag ,
+                    "videos":[vid['videoId'] for vid in tag_videos]}
+                tag_document = json.dumps(tag_ref_dict,sort_keys=True,indent=4, separators=(',', ': '),ensure_ascii=False)
+                tag_ref_documents.append(tag_document)
+                tag_document = tag_document.encode('utf-8')
+                conn = http.client.HTTPConnection(SERVER_IP,SERVER_PORT)
+                conn.request("PUT", "/youtube_data/"+tagId, tag_document,headers)
+                response = conn.getresponse()
+                print("TAG_REF:",response.status, response.reason)
+
+                for video_dict in tag_videos:
+                    if video_dict['videoId'] not in videos:
+                        videos[video_dict['videoId']] = video_dict
             
-            #with referenced videos
-            tagId = tag.replace(' ','_')
-            tag_ref_dict = {
-                "doc_type": "tag_reference",
-                "tagId": tagId,
-                "tag": tag ,
-                "videos":[vid['videoId'] for vid in tag_videos]}
-            tag_document = json.dumps(tag_ref_dict,sort_keys=True,indent=4, separators=(',', ': '),ensure_ascii=False)
-            tag_ref_documents.append(tag_document)
-            tag_document = tag_document.encode('utf-8')
-            conn = http.client.HTTPConnection(SERVER_IP,SERVER_PORT)
-            conn.request("PUT", "/youtube_data/"+tagId, tag_document,headers)
-            response = conn.getresponse()
-            print("TAG_REF:",response.status, response.reason)
-
-            for video_dict in tag_videos:
-                if video_dict['videoId'] not in videos:
-                    videos[video_dict['videoId']] = video_dict
-
-            #with nested videos
-            tagId = tag.replace(' ','_')+"_nested"
-            tag_nest_dict = {
-                "doc_type": "tag_nested",
-                "tagId": tagId,
-                "tag": tag ,
-                "videos":tag_videos}
-            tag_document = json.dumps(tag_nest_dict,sort_keys=True,indent=4, separators=(',', ': '),ensure_ascii=False)
-            tag_nest_documents.append(tag_document)
-            tag_document = tag_document.encode('utf-8')
-            conn = http.client.HTTPConnection(SERVER_IP,SERVER_PORT)
-            conn.request("PUT", "/youtube_data/"+tagId, tag_document,headers)
-            response = conn.getresponse()
-            print("TAG_NEST:",response.status, response.reason)
+                #with nested videos
+                tagId = tag.replace(' ','_')+"_nested"
+                tag_nest_dict = {
+                    "doc_type": "tag_nested",
+                    "tagId": tagId,
+                    "tag": tag ,
+                    "videos":tag_videos}
+                tag_document = json.dumps(tag_nest_dict,sort_keys=True,indent=4, separators=(',', ': '),ensure_ascii=False)
+                tag_nest_documents.append(tag_document)
+                tag_document = tag_document.encode('utf-8')
+                conn = http.client.HTTPConnection(SERVER_IP,SERVER_PORT)
+                conn.request("PUT", "/youtube_data/"+tagId, tag_document,headers)
+                response = conn.getresponse()
+                print("TAG_NEST:",response.status, response.reason)
+            except Exception as e:
+                print(str(e)) 
         
     for video_key, video_dict in videos.items():
-        video_documment = json.dumps(video_dict,sort_keys=True,indent=4, separators=(',', ': '),ensure_ascii=False)
-        video_documents.append(video_documment)
-        #print(video_documment)
-        conn = http.client.HTTPConnection(SERVER_IP,SERVER_PORT)
-        conn.request("PUT", "/youtube_data/"+str(video_dict['videoId']), video_documment.encode('utf-8'),headers)
-        response = conn.getresponse()
-        #print(video_documment)
-        print(response.status, response.reason)
+        try:
+            video_documment = json.dumps(video_dict,sort_keys=True,indent=4, separators=(',', ': '),ensure_ascii=False)
+            video_documents.append(video_documment)
+            #print(video_documment)
+            conn = http.client.HTTPConnection(SERVER_IP,SERVER_PORT)
+            conn.request("PUT", "/youtube_data/"+str(video_dict['videoId']), video_documment.encode('utf-8'),headers)
+            response = conn.getresponse()
+            #print(video_documment)
+            print(response.status, response.reason)
+        except Exception as e:
+            print(str(e)) 
     
     
     # #[print(repr(tag)+"\n") for tag in most_videos]
