@@ -4,8 +4,8 @@ import http.client
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 import traceback
-DEVELOPER_KEY = 'AIzaSyBOfDRyLXu7yhnFAZBiX_FDNclU7EqxSO0'
-SERVER_IP = "ec2-3-84-228-227.compute-1.amazonaws.com"
+DEVELOPER_KEY = ''
+SERVER_IP = "ec2-18-208-175-26.compute-1.amazonaws.com"
 SERVER_PORT = 5984
 headers = {"Host": "couchdb:5984", "Content-Type": "application/json"}
 YOUTUBE_API_SERVICE_NAME = 'youtube'

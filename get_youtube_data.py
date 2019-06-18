@@ -30,7 +30,7 @@ SERVER_IP = "34.239.140.119"
 SERVER_PORT = 5984
 max_results=40
 headers = {"Host": "couchdb:5984", "Accept": "application/json"}
-DEVELOPER_KEY = 'AIzaSyBOfDRyLXu7yhnFAZBiX_FDNclU7EqxSO0'
+DEVELOPER_KEY = ''
 
 def youtube_search(keywords, max_results):
     youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION,
