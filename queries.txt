@@ -1,0 +1,71 @@
+{  
+   "_id":"_design/doc_type",
+   "_rev":"29-a4d69a7ba73d0d9e85ee1ede3973caf8",
+   "views":{  
+      "tag_nested":{  
+         "map":"function (doc) {\n  if(doc.doc_type == \"tag_nested\"){\n    emit(doc.tag,doc.videos)\n  }\n}"
+      },
+      "tag_reference":{  
+         "map":"function (doc) {\n  if(doc.doc_type == \"tag_reference\"){\n    if (doc.videos) {\n      for (var i in doc.videos) {\n        emit([doc.tag, Number(i)+1], {_id: doc.videos[i]});\n      }\n    }\n  }\n}"
+      },
+      "video":{  
+         "map":"function (doc) {\n  if(doc.doc_type == \"video\"){\n    emit(doc._id,doc)\n  }\n}"
+      }
+   },
+   "language":"javascript"
+}
+
+{  
+   "_id":"_design/queries",
+   "_rev":"56-4f5c1a1114ecef5a0596bfeadccd77d5",
+   "views":{  
+      "avg_video_views_per_tag":{  
+         "reduce":"function (keys, values, rereduce) {\n    return sum(values)/values.length;\n}",
+         "map":"function (doc) {\n  if(doc.doc_type == \"tag_nested\"){\n      for (var i in doc.videos) {\n        emit(doc.tag,  Number(doc.videos[i].statistics.viewCount));\n    }\n  }\n}"
+      },
+      "avg_video_likes_per_tag":{  
+         "reduce":"function (keys, values, rereduce) {\n    return sum(values)/values.length;\n}",
+         "map":"function (doc) {\n  if(doc.doc_type == \"tag_nested\"){\n      for (var i in doc.videos) {\n        emit(doc.tag,  Number(doc.videos[i].statistics.likeCount));\n    }\n  }\n}"
+      },
+      "avg_like_dislike_difference_per_tag":{  
+         "map":"function (doc) {\n  if(doc.doc_type == \"tag_nested\"){\n    var sumDifference = 0;\n    for(i in doc.videos){\n      if(doc.videos[i].statistics.likeCount && doc.videos[i].statistics.dislikeCount)sumDifference += (doc.videos[i].statistics.likeCount - doc.videos[i].statistics.dislikeCount);\n    }\n    var avgDifference = sumDifference/doc.videos.length;\n    emit([avgDifference, doc.tag], doc.tag);\n  }\n}"
+      },
+      "avg_video_interac_per_tag":{  
+         "map":"function (doc) {\n  if(doc.doc_type == \"tag_nested\"){\n      var interactions = 0;\n      for (var i in doc.videos) {\n          if(doc.videos[i].statistics){\n            if(doc.videos[i].statistics.likeCount)interactions += Number(doc.videos[i].statistics.likeCount);\n            if(doc.videos[i].statistics.dislikeCount)interactions +=Number(doc.videos[i].statistics.dislikeCount);\n           if(doc.videos[i].statistics.commentCount) interactions +=Number(doc.videos[i].statistics.commentCount);\n          }\n        }\n      avg_interactions = interactions/doc.videos.length\n      emit([avg_interactions,doc.tag],doc.tag)\n  }\n}"
+      },
+      "title_word_count":{  
+         "reduce":"_sum",
+         "map":"function (doc) {\n  if(doc.doc_type == \"tag_nested\"){\n      for (var i in doc.videos) {\n        titlewords = doc.videos[i].title.split(\" \")\n        for( var j in titlewords){\n              emit([doc.tag,titlewords[j].toLowerCase()],1);\n        }\n    }\n  }\n}"
+      },
+      "views_by_tag_date":{  
+         "reduce":"_sum",
+         "map":"function (doc) {\n  if(doc.doc_type == \"tag_nested\"){\n    var interactions = 0;\n    for (var i in doc.videos) {\n      if(doc.videos[i].publishedAt && doc.videos[i].statistics.viewCount){\n        emit([doc.tag,doc.videos[i].publishedAt],Number(doc.videos[i].statistics.viewCount))\n      }\n    }\n  }\n}"
+      },
+      "likes_by_tag_date":{  
+         "reduce":"_sum",
+         "map":"function (doc) {\n  if(doc.doc_type == \"tag_nested\"){\n    var interactions = 0;\n    for (var i in doc.videos) {\n      if(doc.videos[i].publishedAt && doc.videos[i].statistics.viewCount){\n        emit([doc.tag,doc.videos[i].publishedAt],Number(doc.videos[i].statistics.viewCount))\n      }\n    }\n  }\n}"
+      }
+   },
+   "language":"javascript"
+}
+
+videos por etiqueta (empotrados)
+http://18.208.175.26:5984/youtube_data/_design/doc_type/_view/tag_nested?key=%22baby%20shark%22
+
+videos por etiqueta (referenciados)
+http://18.208.175.26:5984/youtube_data/_design/doc_type/_view/tag_reference?startkey=[%22baby%20shark%20dance%22,0]&endkey=[%22baby%20shark%20dance%22,100]&include_docs=true
+
+promedio de "likes" de videos de una misma categoría
+http://18.208.175.26:5984/youtube_data/_design/queries/_view/avg_video_likes_per_tag?group=true
+
+promedio de "views" de videos de una misma categoría
+http://18.208.175.26:5984/youtube_data/_design/queries/_view/avg_video_views_per_tag?group=true
+
+http://18.208.175.26:5984/youtube_data/_design/queries/_view/likes_by_tag_date?startkey=[%22cartoon%22,%222018%22,{}]&endkey=[%22cartoon%22,%222019%22,{}]
+group=true&group_level=1 //total de likes por tag
+
+http://18.208.175.26:5984/youtube_data/_design/queries/_view/video_interac_per_tag?descending=true
+
+http://18.208.175.26:5984/youtube_data/_design/queries/_view/avg_like_dislike_difference_per_tag?descending=true
+
+
